@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Asistencia Adecco</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0b3c5d">
+
+<link rel="manifest" href="manifest.json">
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+:root{
+  --azul:#0b3c5d;
+  --azul2:#1d70b8;
+  --verde:#0f9d58;
+  --rojo:#d93025;
+  --blanco:#fff;
+}
+
+*{box-sizing:border-box;font-family:Arial,sans-serif}
+
+body{
+  margin:0;
+  background:linear-gradient(135deg,#0b3c5d,#1d70b8);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+.card{
+  background:#fff;
+  width:100%;
+  max-width:380px;
+  padding:26px;
+  border-radius:20px;
+  box-shadow:0 12px 28px rgba(0,0,0,.25);
+  text-align:center;
+}
+
+h2{margin:6px 0 14px;color:var(--azul)}
+
+input{
+  width:100%;
+  padding:15px;
+  border-radius:14px;
+  border:1px solid #ccc;
+  font-size:17px;
+  text-align:center;
+  margin-bottom:14px;
+}
+
+button{
+  width:100%;
+  padding:15px;
+  border:none;
+  border-radius:14px;
+  font-size:16px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.btn-buscar{background:var(--azul2);color:#fff}
+.btn-entrada{background:var(--verde);color:#fff}
+.btn-salida{background:var(--rojo);color:#fff}
+
+.foto{
+  width:110px;
+  height:110px;
+  border-radius:50%;
+  border:4px solid var(--azul2);
+  margin:10px auto;
+  object-fit:cover;
+}
+
+.reloj{
+  font-size:24px;
+  font-weight:700;
+  color:var(--azul);
+  margin:10px 0;
+}
+
+.modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.7);
+  justify-content:center;
+  align-items:center;
+  z-index:10;
+}
+
+#reader{width:240px;margin:auto}
+
+#loader{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(255,255,255,.85);
+  justify-content:center;
+  align-items:center;
+  z-index:20;
+}
+
+.spinner{
+  width:48px;
+  height:48px;
+  border:5px solid #ddd;
+  border-top:5px solid var(--azul2);
+  border-radius:50%;
+  animation:spin 1s linear infinite;
+}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+
+<body>
+
+<div id="loader"><div class="spinner"></div></div>
+
+<div id="alerta" class="modal">
+  <div class="card">
+    <h3 id="alertaMsg"></h3><br>
+    <button class="btn-buscar" onclick="cerrarAlerta()">Aceptar</button>
+  </div>
+</div>
+
+<div id="qrModal" class="modal">
+  <div class="card">
+    <h3>Escanee el QR</h3>
+    <div id="reader"></div><br>
+    <button class="btn-salida" onclick="cerrarQR()">Cancelar</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Asistencia Adecco</h2>
+
+  <div id="p1">
+    <input id="dni" placeholder="Ingrese DNI" maxlength="8"
+      onkeypress="if(event.key==='Enter') buscar()">
+    <button class="btn-buscar" onclick="buscar()">Buscar</button>
+  </div>
+
+  <div id="p2" style="display:none">
+    <img id="foto" class="foto">
+    <h3 id="nombre"></h3>
+    <p id="cargo"></p>
+
+    <div id="reloj" class="reloj"></div>
+
+    <button class="btn-entrada" onclick="abrirQR('ENTRADA')">ENTRADA</button><br><br>
+    <button class="btn-salida" onclick="abrirQR('SALIDA')">SALIDA</button>
+  </div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycby7BUOlm-_0txMyHLX8_fhL0IWj-S4yUIzSkluwkNwSMTRI0QbnxSa9sYfazEnOxTAB/exec";
+const QR_VALIDO = "RRHH_ASISTENCIA_OK";
+
+let trabajador = {};
+let tipoActual = "";
+let qr = null;
+let bloqueado = false;
+
+const deviceId = localStorage.getItem("DEVICE_ID") || crypto.randomUUID();
+localStorage.setItem("DEVICE_ID", deviceId);
+
+setInterval(()=>{
+  const d = new Date();
+  reloj.innerText = d.toLocaleDateString("es-PE") + " " +
+                    d.toLocaleTimeString("es-PE");
+},1000);
+
+/* 🔹 FUNCIÓN AGREGADA: fuerza permiso y ubicación actual */
+function obtenerUbicacionActual(ok, error){
+  if(!navigator.geolocation){
+    error();
+    return;
+  }
+
+  navigator.permissions?.query({ name: "geolocation" }).then(() => {
+    navigator.geolocation.getCurrentPosition(
+      ok,
+      error,
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 15000
+      }
+    );
+  }).catch(()=>{
+    navigator.geolocation.getCurrentPosition(
+      ok,
+      error,
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 15000
+      }
+    );
+  });
+}
+
+function buscar(){
+  dni.value = dni.value.replace(/\D/g,'');
+  if(dni.value.length !== 8) return mostrarAlerta("DNI inválido");
+
+  loader.style.display = "flex";
+
+  fetch(API_URL,{
+    method:"POST",
+    body:new URLSearchParams({ action:"buscar", dni:dni.value })
+  })
+  .then(r=>r.json())
+  .then(r=>{
+    if(!r.ok) throw r.mensaje;
+    trabajador = r.data;
+    p1.style.display="none";
+    p2.style.display="block";
+    nombre.innerText = trabajador.nombre;
+    cargo.innerText = trabajador.cargo;
+    foto.src = trabajador.foto || "https://via.placeholder.com/110";
+  })
+  .catch(e=>mostrarAlerta(e))
+  .finally(()=>loader.style.display="none");
+}
+
+function abrirQR(tipo){
+  tipoActual = tipo;
+  bloqueado = false;
+  qrModal.style.display = "flex";
+
+  if(!qr){
+    qr = new Html5Qrcode("reader");
+  }
+
+  qr.start({facingMode:"environment"},{fps:8,qrbox:200},txt=>{
+    if(txt !== QR_VALIDO || bloqueado) return;
+    bloqueado = true;
+    navigator.vibrate?.(150);
+    cerrarQR();
+    registrar();
+  });
+}
+
+function cerrarQR(){
+  qrModal.style.display="none";
+  qr?.stop().catch(()=>{});
+}
+
+function registrar(){
+  loader.style.display="flex";
+
+  obtenerUbicacionActual(
+    p=>{
+      fetch(API_URL,{
+        method:"POST",
+        body:new URLSearchParams({
+          action:"registrar",
+          dni:trabajador.dni,
+          nombre:trabajador.nombre,
+          cargo:trabajador.cargo,
+          tipo:tipoActual,
+          lat:p.coords.latitude,
+          lng:p.coords.longitude,
+          deviceId
+        })
+      })
+      .then(r=>r.json())
+      .then(r=>{
+        if(!r.ok) throw r.mensaje;
+        mostrarAlerta(r.mensaje);
+        setTimeout(()=>location.reload(),1200);
+      })
+      .catch(e=>mostrarAlerta(e))
+      .finally(()=>loader.style.display="none");
+    },
+    ()=>{
+      loader.style.display="none";
+      mostrarAlerta("Debe activar la ubicación para registrar asistencia");
+    }
+  );
+}
+
+function mostrarAlerta(m){
+  alertaMsg.innerText = m;
+  alerta.style.display="flex";
+}
+
+function cerrarAlerta(){
+  alerta.style.display="none";
+}
+</script>
+
+<script>
+/* REGISTRO SERVICE WORKER */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js")
+      .catch(()=>{});
+  });
+}
+</script>
+
+</body>
+</html>
