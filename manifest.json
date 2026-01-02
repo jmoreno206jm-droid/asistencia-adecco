@@ -1,13 +1,11 @@
 {
   "name": "Asistencia Adecco",
   "short_name": "Asistencia",
-  "description": "Registro de asistencia con DNI, QR y ubicación",
   "start_url": "./index.html",
-  "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#0b3c5d",
   "theme_color": "#0b3c5d",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "icon-192.png",
