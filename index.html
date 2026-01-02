@@ -35,8 +35,6 @@ body{
   box-shadow:0 12px 28px rgba(0,0,0,.25);
   text-align:center;
 }
-body.entrada .card{border-top:6px solid var(--verde)}
-body.salida .card{border-top:6px solid var(--amarillo)}
 h2{margin:6px 0 14px;color:var(--azul)}
 input{
   width:100%;
@@ -56,7 +54,6 @@ button{
   font-weight:600;
   cursor:pointer;
 }
-button:disabled{opacity:.6}
 .btn-buscar{background:var(--azul2);color:#fff}
 .btn-entrada{background:var(--verde);color:#fff}
 .btn-salida{background:var(--amarillo);color:#000}
@@ -75,6 +72,8 @@ button:disabled{opacity:.6}
   margin:10px 0;
 }
 .reloj span{display:block;font-size:14px;opacity:.75}
+
+/* MODALS */
 .modal{
   display:none;
   position:fixed;
@@ -84,7 +83,8 @@ button:disabled{opacity:.6}
   align-items:center;
   z-index:10;
 }
-#reader{width:240px;margin:auto}
+
+/* LOADER */
 #loader{
   display:none;
   position:fixed;
@@ -103,18 +103,29 @@ button:disabled{opacity:.6}
   animation:spin 1s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* CONFIRMACIONES */
+.confirm-entrada{border-top:6px solid var(--verde)}
+.confirm-salida{border-top:6px solid var(--amarillo)}
+.confirm-icon{font-size:48px;margin-bottom:10px}
+.confirm-text{font-size:20px;font-weight:700}
+
+/* QR */
+#reader{width:240px;margin:auto}
 </style>
 </head>
 
 <body>
 
+<!-- LOADER -->
 <div id="loader">
   <div style="text-align:center">
     <div class="spinner"></div>
-    <p style="margin-top:10px;color:#0b3c5d">Ejecutando…</p>
+    <p id="loaderText" style="margin-top:10px;color:#0b3c5d">Procesando…</p>
   </div>
 </div>
 
+<!-- ALERTA -->
 <div id="alerta" class="modal">
   <div class="card">
     <h3 id="alertaMsg"></h3><br>
@@ -122,11 +133,21 @@ button:disabled{opacity:.6}
   </div>
 </div>
 
+<!-- QR -->
 <div id="qrModal" class="modal">
   <div class="card">
     <h3>Escanee el QR</h3>
     <div id="reader"></div><br>
     <button class="btn-salida" onclick="cerrarQR()">Cancelar</button>
+  </div>
+</div>
+
+<!-- CONFIRMACION -->
+<div id="confirmacion" class="modal">
+  <div class="card" id="confirmCard">
+    <div class="confirm-icon" id="confirmIcon"></div>
+    <div class="confirm-text" id="confirmTitulo"></div>
+    <p id="confirmTexto"></p>
   </div>
 </div>
 
@@ -144,7 +165,6 @@ button:disabled{opacity:.6}
     <h3 id="nombre"></h3>
     <p id="cargo"></p>
     <div id="reloj" class="reloj"></div>
-
     <button class="btn-entrada" onclick="abrirQR('ENTRADA')">ENTRADA</button><br><br>
     <button class="btn-salida" onclick="abrirQR('SALIDA')">SALIDA</button>
   </div>
@@ -159,73 +179,68 @@ let tipoActual = "";
 let qr = null;
 let bloqueado = false;
 
-/* 🆔 ID ÚNICO DE DISPOSITIVO (CORTO Y PERMANENTE) */
-let deviceId = localStorage.getItem("DEVICE_ID");
-if(!deviceId){
-  deviceId = Math.random().toString(36).substring(2,10).toUpperCase();
-  localStorage.setItem("DEVICE_ID", deviceId);
-}
+const deviceId = localStorage.getItem("DEVICE_ID") || crypto.randomUUID();
+localStorage.setItem("DEVICE_ID", deviceId);
 
-/* 🔒 CONTROL DIARIO */
-function hoy(){
-  return new Date().toISOString().slice(0,10);
-}
-function key(tipo){
-  return `MARCA_${trabajador.dni}_${tipo}_${hoy()}`;
-}
-function marcoHoy(tipo){
-  return localStorage.getItem(key(tipo)) === "OK";
-}
-function guardarMarca(tipo){
-  localStorage.setItem(key(tipo), "OK");
+/* 🔒 BLOQUEO LOCAL (UX) */
+function yaMarcoHoy(dni,tipo){
+  const hoy = new Date().toISOString().slice(0,10);
+  return localStorage.getItem(`ASISTENCIA_${dni}_${hoy}_${tipo}`) !== null;
 }
 
 /* RELOJ */
 setInterval(()=>{
-  const d=new Date();
-  reloj.innerHTML=`${d.toLocaleTimeString("es-PE")}<span>${d.toLocaleDateString("es-PE")}</span>`;
+  const d = new Date();
+  reloj.innerHTML = `${d.toLocaleTimeString("es-PE")}<span>${d.toLocaleDateString("es-PE")}</span>`;
 },1000);
 
-/* BUSCAR */
+/* 🔍 BUSCAR (OPTIMIZADO) */
 function buscar(){
-  dni.value=dni.value.replace(/\D/g,'');
-  if(dni.value.length!==8) return mostrarAlerta("DNI inválido");
+  dni.value = dni.value.replace(/\D/g,'');
+  if(dni.value.length !== 8)
+    return mostrarAlerta("DNI inválido");
 
-  loader.style.display="flex";
+  loaderText.innerText = "Buscando trabajador…";
+  loader.style.display = "flex";
 
   fetch(API_URL,{
     method:"POST",
-    body:new URLSearchParams({action:"buscar",dni:dni.value})
+    body:new URLSearchParams({ action:"buscar", dni:dni.value })
   })
   .then(r=>r.json())
   .then(r=>{
     if(!r.ok) throw r.mensaje;
-    trabajador=r.data;
-    p1.style.display="none";
-    p2.style.display="block";
-    nombre.innerText=trabajador.nombre;
-    cargo.innerText=trabajador.cargo;
-    foto.src=trabajador.foto||"https://via.placeholder.com/110";
+
+    trabajador = r.data;
+    p1.style.display = "none";
+    p2.style.display = "block";
+    nombre.innerText = trabajador.nombre;
+    cargo.innerText  = trabajador.cargo;
+    foto.src = trabajador.foto || "https://via.placeholder.com/110";
   })
   .catch(e=>mostrarAlerta(e))
-  .finally(()=>loader.style.display="none");
+  .finally(()=> loader.style.display = "none");
 }
 
 /* QR */
 function abrirQR(tipo){
-  if(marcoHoy(tipo))
-    return mostrarAlerta(`Ya registró ${tipo} hoy`);
+  if(yaMarcoHoy(trabajador.dni,tipo)){
+    confirmacion.style.display="none";
+    loader.style.display="none";
+    return mostrarAlerta(`⚠️ Ya registró ${tipo} hoy`);
+  }
 
-  tipoActual=tipo;
+  tipoActual = tipo;
+  bloqueado = false;
   qrModal.style.display="flex";
-
-  if(!qr) qr=new Html5Qrcode("reader");
+  if(!qr) qr = new Html5Qrcode("reader");
 
   qr.start({facingMode:"environment"},{fps:8,qrbox:200},txt=>{
     if(txt!==QR_VALIDO || bloqueado) return;
-    bloqueado=true;
+    bloqueado = true;
     cerrarQR();
-    registrar();
+    mostrarConfirmacion("Validando…");
+    setTimeout(registrar,500);
   });
 }
 
@@ -234,11 +249,31 @@ function cerrarQR(){
   qr?.stop().catch(()=>{});
 }
 
+/* CONFIRMACIONES */
+function mostrarConfirmacion(txt,final=false){
+  confirmacion.style.display="flex";
+  confirmCard.className="card "+(tipoActual==="ENTRADA"?"confirm-entrada":"confirm-salida");
+  confirmIcon.innerText=tipoActual==="ENTRADA"?"✅":"🟡";
+
+  if(final){
+    confirmTitulo.innerText=`${tipoActual} CONFIRMADA`;
+    confirmTexto.innerText="Registro exitoso";
+    setTimeout(()=>{
+      confirmacion.style.display="none";
+      location.reload();
+    },1300);
+  }else{
+    confirmTitulo.innerText=txt;
+    confirmTexto.innerText="Espere un momento…";
+  }
+}
+
 /* REGISTRAR */
 function registrar(){
-  navigator.geolocation.getCurrentPosition(p=>{
-    loader.style.display="flex";
+  loaderText.innerText = `Registrando ${tipoActual}…`;
+  loader.style.display = "flex";
 
+  navigator.geolocation.getCurrentPosition(p=>{
     fetch(API_URL,{
       method:"POST",
       body:new URLSearchParams({
@@ -255,18 +290,18 @@ function registrar(){
     .then(r=>r.json())
     .then(r=>{
       if(!r.ok) throw r.mensaje;
-      guardarMarca(tipoActual);
-      mostrarAlerta(r.mensaje);
-      setTimeout(()=>location.reload(),1200);
+      const hoy=new Date().toISOString().slice(0,10);
+      localStorage.setItem(`ASISTENCIA_${trabajador.dni}_${hoy}_${tipoActual}`,"OK");
+      loader.style.display="none";
+      mostrarConfirmacion("",true);
     })
-    .catch(e=>mostrarAlerta(e))
-    .finally(()=>loader.style.display="none");
+    .catch(e=>mostrarAlerta(e));
   });
 }
 
 /* ALERTA */
 function mostrarAlerta(m){
-  alertaMsg.innerText=m;
+  alertaMsg.innerText = m;
   alerta.style.display="flex";
 }
 function cerrarAlerta(){
