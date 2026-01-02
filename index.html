@@ -19,9 +19,7 @@
   --amarillo:#fbbc04;
   --blanco:#fff;
 }
-
 *{box-sizing:border-box;font-family:Arial,sans-serif}
-
 body{
   margin:0;
   background:linear-gradient(135deg,#0b3c5d,#1d70b8);
@@ -30,7 +28,6 @@ body{
   align-items:center;
   height:100vh;
 }
-
 .card{
   background:#fff;
   width:100%;
@@ -40,9 +37,7 @@ body{
   box-shadow:0 12px 28px rgba(0,0,0,.25);
   text-align:center;
 }
-
 h2{margin:6px 0 14px;color:var(--azul)}
-
 input{
   width:100%;
   padding:15px;
@@ -52,7 +47,6 @@ input{
   text-align:center;
   margin-bottom:14px;
 }
-
 button{
   width:100%;
   padding:15px;
@@ -62,11 +56,9 @@ button{
   font-weight:600;
   cursor:pointer;
 }
-
 .btn-buscar{background:var(--azul2);color:#fff}
 .btn-entrada{background:var(--verde);color:#fff}
 .btn-salida{background:var(--amarillo);color:#000}
-
 .foto{
   width:110px;
   height:110px;
@@ -75,14 +67,12 @@ button{
   margin:10px auto;
   object-fit:cover;
 }
-
 .reloj{
   font-size:24px;
   font-weight:700;
   color:var(--azul);
   margin:10px 0;
 }
-
 .modal{
   display:none;
   position:fixed;
@@ -92,9 +82,7 @@ button{
   align-items:center;
   z-index:10;
 }
-
 #reader{width:240px;margin:auto}
-
 #loader{
   display:none;
   position:fixed;
@@ -104,7 +92,6 @@ button{
   align-items:center;
   z-index:20;
 }
-
 .spinner{
   width:48px;
   height:48px;
@@ -113,7 +100,6 @@ button{
   border-radius:50%;
   animation:spin 1s linear infinite;
 }
-
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
@@ -159,7 +145,7 @@ button{
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbzyKkyMcw9vfFuNcfXC1YoglD4uXaKIo-ijQi0SBKl-YKRk367UWqckvMZPhxVwictm/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxzF3oXJ17IOWzHPx-OySVR_BE3TiRbRKK6bx8dOqkzgYBMHukY-Xbn9--KLXq3NrQU/exec";
 const QR_VALIDO = "RRHH_ASISTENCIA_OK";
 
 let trabajador = {};
@@ -172,61 +158,41 @@ localStorage.setItem("DEVICE_ID", deviceId);
 
 setInterval(()=>{
   const d = new Date();
-  reloj.innerText = d.toLocaleDateString("es-PE") + " " +
-                    d.toLocaleTimeString("es-PE");
+  reloj.innerText = d.toLocaleDateString("es-PE")+" "+d.toLocaleTimeString("es-PE");
 },1000);
 
-/* 📍 UBICACIÓN OPTIMIZADA */
+/* ⚡ Pre-carga GPS (solo permiso, no registra nada) */
+navigator.geolocation.getCurrentPosition(()=>{},()=>{});
+
+/* 📍 Ubicación sin restricciones */
 function obtenerUbicacionActual(ok){
-  if (!navigator.geolocation) {
-    mostrarAlerta("Este dispositivo no soporta GPS");
+  if(!navigator.geolocation){
+    mostrarAlerta("Este dispositivo no soporta ubicación.");
     return;
   }
-
-  loader.style.display = "flex";
-
+  loader.style.display="flex";
   navigator.geolocation.getCurrentPosition(
     p=>{
-      loader.style.display = "none";
-
-      if (p.coords.accuracy > 50) {
-        mostrarAlerta(
-          "Ubicación poco precisa (" +
-          Math.round(p.coords.accuracy) +
-          " m).\n\nEspere unos segundos y vuelva a intentar."
-        );
-        return;
-      }
-
+      loader.style.display="none";
       ok(p);
     },
-    e=>{
-      loader.style.display = "none";
-
-      let msg = "No se pudo obtener la ubicación.\n\n";
-      if (e.code === 1) msg += "Revise permisos de ubicación.";
-      else if (e.code === 2) msg += "Active el GPS.";
-      else if (e.code === 3) msg += "La ubicación está tardando demasiado.";
-      else msg += "Revise GPS y batería.";
-
-      mostrarAlerta(msg);
+    ()=>{
+      loader.style.display="none";
+      mostrarAlerta("No se pudo obtener la ubicación.");
     },
-    {
-      enableHighAccuracy:true,
-      timeout:20000,
-      maximumAge:0
-    }
+    { enableHighAccuracy:true }
   );
 }
 
 function buscar(){
   dni.value = dni.value.replace(/\D/g,'');
-  if(dni.value.length !== 8) return mostrarAlerta("DNI inválido");
+  if(dni.value.length!==8) return mostrarAlerta("DNI inválido");
 
   loader.style.display="flex";
 
   fetch(API_URL,{
     method:"POST",
+    cache:"no-store",
     body:new URLSearchParams({ action:"buscar", dni:dni.value })
   })
   .then(r=>r.json())
@@ -246,12 +212,12 @@ function buscar(){
 function abrirQR(tipo){
   tipoActual = tipo;
   bloqueado = false;
-  qrModal.style.display = "flex";
+  qrModal.style.display="flex";
 
   if(!qr) qr = new Html5Qrcode("reader");
 
   qr.start({facingMode:"environment"},{fps:8,qrbox:200},txt=>{
-    if(txt !== QR_VALIDO || bloqueado) return;
+    if(txt!==QR_VALIDO || bloqueado) return;
     bloqueado = true;
     navigator.vibrate?.(150);
     cerrarQR();
@@ -270,6 +236,7 @@ function registrar(){
 
     fetch(API_URL,{
       method:"POST",
+      cache:"no-store",
       body:new URLSearchParams({
         action:"registrar",
         dni:trabajador.dni,
@@ -278,7 +245,6 @@ function registrar(){
         tipo:tipoActual,
         lat:p.coords.latitude,
         lng:p.coords.longitude,
-        accuracy:p.coords.accuracy,
         deviceId
       })
     })
@@ -288,9 +254,7 @@ function registrar(){
       mostrarAlerta(r.mensaje);
       setTimeout(()=>location.reload(),1200);
     })
-    .catch(()=>{
-      mostrarAlerta("No se pudo registrar. Revise conexión y GPS.");
-    })
+    .catch(e=>mostrarAlerta(e))
     .finally(()=>loader.style.display="none");
   });
 }
@@ -299,16 +263,14 @@ function mostrarAlerta(m){
   alertaMsg.innerText = m;
   alerta.style.display="flex";
 }
-
 function cerrarAlerta(){
   alerta.style.display="none";
 }
 </script>
 
 <script>
-/* SERVICE WORKER */
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>{
     navigator.serviceWorker.register("sw.js").catch(()=>{});
   });
 }
