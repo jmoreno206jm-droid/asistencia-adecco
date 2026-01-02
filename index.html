@@ -8,7 +8,6 @@
 <meta name="theme-color" content="#0b3c5d">
 
 <link rel="manifest" href="manifest.json">
-
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
@@ -17,7 +16,6 @@
   --azul2:#1d70b8;
   --verde:#0f9d58;
   --amarillo:#fbbc04;
-  --blanco:#fff;
 }
 *{box-sizing:border-box;font-family:Arial,sans-serif}
 body{
@@ -28,6 +26,8 @@ body{
   align-items:center;
   height:100vh;
 }
+
+/* CARD */
 .card{
   background:#fff;
   width:100%;
@@ -36,8 +36,13 @@ body{
   border-radius:20px;
   box-shadow:0 12px 28px rgba(0,0,0,.25);
   text-align:center;
+  transition:transform .3s ease;
 }
+body.entrada .card{border-top:6px solid var(--verde)}
+body.salida .card{border-top:6px solid var(--amarillo)}
+
 h2{margin:6px 0 14px;color:var(--azul)}
+
 input{
   width:100%;
   padding:15px;
@@ -47,6 +52,7 @@ input{
   text-align:center;
   margin-bottom:14px;
 }
+
 button{
   width:100%;
   padding:15px;
@@ -55,10 +61,18 @@ button{
   font-size:16px;
   font-weight:600;
   cursor:pointer;
+  transition:transform .15s ease, box-shadow .15s ease, opacity .15s;
 }
+button:active{
+  transform:scale(.97);
+  box-shadow:0 4px 10px rgba(0,0,0,.25) inset;
+}
+button:disabled{opacity:.6}
+
 .btn-buscar{background:var(--azul2);color:#fff}
 .btn-entrada{background:var(--verde);color:#fff}
 .btn-salida{background:var(--amarillo);color:#000}
+
 .foto{
   width:110px;
   height:110px;
@@ -67,12 +81,20 @@ button{
   margin:10px auto;
   object-fit:cover;
 }
+
 .reloj{
-  font-size:24px;
+  font-size:22px;
   font-weight:700;
   color:var(--azul);
   margin:10px 0;
 }
+.reloj span{
+  display:block;
+  font-size:14px;
+  opacity:.75;
+}
+
+/* MODALS */
 .modal{
   display:none;
   position:fixed;
@@ -82,7 +104,18 @@ button{
   align-items:center;
   z-index:10;
 }
+.modal .card{
+  animation:pop .25s ease;
+}
+@keyframes pop{
+  from{transform:scale(.9);opacity:0}
+  to{transform:scale(1);opacity:1}
+}
+
+/* QR */
 #reader{width:240px;margin:auto}
+
+/* LOADER */
 #loader{
   display:none;
   position:fixed;
@@ -102,9 +135,7 @@ button{
 }
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ===============================
-   🔍 ANIMACIÓN BUSCANDO (NUEVO)
-   =============================== */
+/* BUSCANDO */
 body.buscando::before{
   content:"";
   position:fixed;
@@ -113,23 +144,31 @@ body.buscando::before{
   animation:buscandoFlash 1s ease-in-out infinite alternate;
   z-index:-1;
 }
-@keyframes buscandoFlash{
-  from{opacity:.35}
-  to{opacity:.7}
-}
+@keyframes buscandoFlash{from{opacity:.35}to{opacity:.7}}
 body.buscando .card{
   animation:buscandoCard 1s ease-in-out infinite alternate;
 }
-@keyframes buscandoCard{
-  from{transform:scale(.98)}
-  to{transform:scale(1)}
+@keyframes buscandoCard{from{transform:scale(.98)}to{transform:scale(1)}}
+
+/* TRANSICIÓN */
+.fade-in{
+  animation:fadeIn .35s ease;
+}
+@keyframes fadeIn{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:none}
 }
 </style>
 </head>
 
 <body>
 
-<div id="loader"><div class="spinner"></div></div>
+<div id="loader">
+  <div style="text-align:center">
+    <div class="spinner"></div>
+    <p style="margin-top:10px;color:#0b3c5d">Ejecutando…</p>
+  </div>
+</div>
 
 <div id="alerta" class="modal">
   <div class="card">
@@ -168,7 +207,7 @@ body.buscando .card{
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbxzF3oXJ17IOWzHPx-OySVR_BE3TiRbRKK6bx8dOqkzgYBMHukY-Xbn9--KLXq3NrQU/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzNyyLvzjt0W7SLMI8XO1ODi_Od3udPjt0Uu8sKWQJAl5_vnlDcenWWSPzN-nlqlZxh/exec";
 const QR_VALIDO = "RRHH_ASISTENCIA_OK";
 
 let trabajador = {};
@@ -179,20 +218,25 @@ let bloqueado = false;
 const deviceId = localStorage.getItem("DEVICE_ID") || crypto.randomUUID();
 localStorage.setItem("DEVICE_ID", deviceId);
 
+/* RELOJ */
 setInterval(()=>{
   const d = new Date();
-  reloj.innerText = d.toLocaleDateString("es-PE")+" "+d.toLocaleTimeString("es-PE");
+  reloj.innerHTML = `
+    ${d.toLocaleTimeString("es-PE")}
+    <span>${d.toLocaleDateString("es-PE")}</span>
+  `;
 },1000);
 
 navigator.geolocation.getCurrentPosition(()=>{},()=>{});
 
+/* BUSCAR */
 function buscar(){
   dni.value = dni.value.replace(/\D/g,'');
   if(dni.value.length!==8) return mostrarAlerta("DNI inválido");
 
-  document.body.classList.add("buscando"); // ✅ NUEVO
-
+  document.body.classList.add("buscando");
   loader.style.display="flex";
+  document.querySelector(".btn-buscar").disabled = true;
 
   fetch(API_URL,{
     method:"POST",
@@ -202,9 +246,12 @@ function buscar(){
   .then(r=>r.json())
   .then(r=>{
     if(!r.ok) throw r.mensaje;
+
     trabajador = r.data;
     p1.style.display="none";
     p2.style.display="block";
+    p2.classList.add("fade-in");
+
     nombre.innerText = trabajador.nombre;
     cargo.innerText = trabajador.cargo;
     foto.src = trabajador.foto || "https://via.placeholder.com/110";
@@ -212,12 +259,17 @@ function buscar(){
   .catch(e=>mostrarAlerta(e))
   .finally(()=>{
     loader.style.display="none";
-    document.body.classList.remove("buscando"); // ✅ NUEVO
+    document.body.classList.remove("buscando");
+    document.querySelector(".btn-buscar").disabled = false;
   });
 }
 
+/* QR */
 function abrirQR(tipo){
   tipoActual = tipo;
+  document.body.classList.toggle("entrada", tipo==="ENTRADA");
+  document.body.classList.toggle("salida", tipo==="SALIDA");
+
   bloqueado = false;
   qrModal.style.display="flex";
 
@@ -237,6 +289,7 @@ function cerrarQR(){
   qr?.stop().catch(()=>{});
 }
 
+/* REGISTRAR */
 function registrar(){
   obtenerUbicacionActual(p=>{
     loader.style.display="flex";
@@ -266,25 +319,19 @@ function registrar(){
   });
 }
 
+/* UBICACIÓN */
 function obtenerUbicacionActual(ok){
-  if(!navigator.geolocation){
-    mostrarAlerta("Este dispositivo no soporta ubicación.");
-    return;
-  }
-  loader.style.display="flex";
+  if(!navigator.geolocation)
+    return mostrarAlerta("Este dispositivo no soporta ubicación.");
+
   navigator.geolocation.getCurrentPosition(
-    p=>{
-      loader.style.display="none";
-      ok(p);
-    },
-    ()=>{
-      loader.style.display="none";
-      mostrarAlerta("No se pudo obtener la ubicación.");
-    },
-    { enableHighAccuracy:true }
+    p=>ok(p),
+    ()=>mostrarAlerta("No se pudo obtener la ubicación."),
+    {enableHighAccuracy:true}
   );
 }
 
+/* ALERTA */
 function mostrarAlerta(m){
   alertaMsg.innerText = m;
   alerta.style.display="flex";
