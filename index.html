@@ -7,9 +7,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="theme-color" content="#0b3c5d">
 
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="./manifest.json">
 
-<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://unpkg.com/html5-qrcode" defer></script>
 
 <style>
 :root{
@@ -153,18 +153,22 @@ let tipoActual = "";
 let qr = null;
 let bloqueado = false;
 
+const reloj = document.getElementById("reloj");
+
 const deviceId = localStorage.getItem("DEVICE_ID") || crypto.randomUUID();
 localStorage.setItem("DEVICE_ID", deviceId);
 
 setInterval(()=>{
   const d = new Date();
-  reloj.innerText = d.toLocaleDateString("es-PE")+" "+d.toLocaleTimeString("es-PE");
+  reloj.innerText =
+    d.toLocaleDateString("es-PE") + " " +
+    d.toLocaleTimeString("es-PE");
 },1000);
 
-/* ⚡ Pre-carga GPS (solo permiso, no registra nada) */
+// Pre-carga permiso GPS
 navigator.geolocation.getCurrentPosition(()=>{},()=>{});
 
-/* 📍 Ubicación sin restricciones */
+// Ubicación SIN restricciones
 function obtenerUbicacionActual(ok){
   if(!navigator.geolocation){
     mostrarAlerta("Este dispositivo no soporta ubicación.");
@@ -271,7 +275,7 @@ function cerrarAlerta(){
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("sw.js").catch(()=>{});
+    navigator.serviceWorker.register("./sw.js").catch(()=>{});
   });
 }
 </script>
