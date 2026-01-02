@@ -26,8 +26,6 @@ body{
   align-items:center;
   height:100vh;
 }
-
-/* CARD */
 .card{
   background:#fff;
   width:100%;
@@ -36,13 +34,10 @@ body{
   border-radius:20px;
   box-shadow:0 12px 28px rgba(0,0,0,.25);
   text-align:center;
-  transition:transform .3s ease;
 }
 body.entrada .card{border-top:6px solid var(--verde)}
 body.salida .card{border-top:6px solid var(--amarillo)}
-
 h2{margin:6px 0 14px;color:var(--azul)}
-
 input{
   width:100%;
   padding:15px;
@@ -52,7 +47,6 @@ input{
   text-align:center;
   margin-bottom:14px;
 }
-
 button{
   width:100%;
   padding:15px;
@@ -61,18 +55,11 @@ button{
   font-size:16px;
   font-weight:600;
   cursor:pointer;
-  transition:transform .15s ease, box-shadow .15s ease, opacity .15s;
-}
-button:active{
-  transform:scale(.97);
-  box-shadow:0 4px 10px rgba(0,0,0,.25) inset;
 }
 button:disabled{opacity:.6}
-
 .btn-buscar{background:var(--azul2);color:#fff}
 .btn-entrada{background:var(--verde);color:#fff}
 .btn-salida{background:var(--amarillo);color:#000}
-
 .foto{
   width:110px;
   height:110px;
@@ -81,20 +68,13 @@ button:disabled{opacity:.6}
   margin:10px auto;
   object-fit:cover;
 }
-
 .reloj{
   font-size:22px;
   font-weight:700;
   color:var(--azul);
   margin:10px 0;
 }
-.reloj span{
-  display:block;
-  font-size:14px;
-  opacity:.75;
-}
-
-/* MODALS */
+.reloj span{display:block;font-size:14px;opacity:.75}
 .modal{
   display:none;
   position:fixed;
@@ -104,18 +84,7 @@ button:disabled{opacity:.6}
   align-items:center;
   z-index:10;
 }
-.modal .card{
-  animation:pop .25s ease;
-}
-@keyframes pop{
-  from{transform:scale(.9);opacity:0}
-  to{transform:scale(1);opacity:1}
-}
-
-/* QR */
 #reader{width:240px;margin:auto}
-
-/* LOADER */
 #loader{
   display:none;
   position:fixed;
@@ -134,30 +103,6 @@ button:disabled{opacity:.6}
   animation:spin 1s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* BUSCANDO */
-body.buscando::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  background:rgba(29,112,184,.18);
-  animation:buscandoFlash 1s ease-in-out infinite alternate;
-  z-index:-1;
-}
-@keyframes buscandoFlash{from{opacity:.35}to{opacity:.7}}
-body.buscando .card{
-  animation:buscandoCard 1s ease-in-out infinite alternate;
-}
-@keyframes buscandoCard{from{transform:scale(.98)}to{transform:scale(1)}}
-
-/* TRANSICIÓN */
-.fade-in{
-  animation:fadeIn .35s ease;
-}
-@keyframes fadeIn{
-  from{opacity:0;transform:translateY(10px)}
-  to{opacity:1;transform:none}
-}
 </style>
 </head>
 
@@ -198,7 +143,6 @@ body.buscando .card{
     <img id="foto" class="foto">
     <h3 id="nombre"></h3>
     <p id="cargo"></p>
-
     <div id="reloj" class="reloj"></div>
 
     <button class="btn-entrada" onclick="abrirQR('ENTRADA')">ENTRADA</button><br><br>
@@ -215,70 +159,71 @@ let tipoActual = "";
 let qr = null;
 let bloqueado = false;
 
-const deviceId = localStorage.getItem("DEVICE_ID") || crypto.randomUUID();
-localStorage.setItem("DEVICE_ID", deviceId);
+/* 🆔 ID ÚNICO DE DISPOSITIVO (CORTO Y PERMANENTE) */
+let deviceId = localStorage.getItem("DEVICE_ID");
+if(!deviceId){
+  deviceId = Math.random().toString(36).substring(2,10).toUpperCase();
+  localStorage.setItem("DEVICE_ID", deviceId);
+}
+
+/* 🔒 CONTROL DIARIO */
+function hoy(){
+  return new Date().toISOString().slice(0,10);
+}
+function key(tipo){
+  return `MARCA_${trabajador.dni}_${tipo}_${hoy()}`;
+}
+function marcoHoy(tipo){
+  return localStorage.getItem(key(tipo)) === "OK";
+}
+function guardarMarca(tipo){
+  localStorage.setItem(key(tipo), "OK");
+}
 
 /* RELOJ */
 setInterval(()=>{
-  const d = new Date();
-  reloj.innerHTML = `
-    ${d.toLocaleTimeString("es-PE")}
-    <span>${d.toLocaleDateString("es-PE")}</span>
-  `;
+  const d=new Date();
+  reloj.innerHTML=`${d.toLocaleTimeString("es-PE")}<span>${d.toLocaleDateString("es-PE")}</span>`;
 },1000);
-
-navigator.geolocation.getCurrentPosition(()=>{},()=>{});
 
 /* BUSCAR */
 function buscar(){
-  dni.value = dni.value.replace(/\D/g,'');
+  dni.value=dni.value.replace(/\D/g,'');
   if(dni.value.length!==8) return mostrarAlerta("DNI inválido");
 
-  document.body.classList.add("buscando");
   loader.style.display="flex";
-  document.querySelector(".btn-buscar").disabled = true;
 
   fetch(API_URL,{
     method:"POST",
-    cache:"no-store",
-    body:new URLSearchParams({ action:"buscar", dni:dni.value })
+    body:new URLSearchParams({action:"buscar",dni:dni.value})
   })
   .then(r=>r.json())
   .then(r=>{
     if(!r.ok) throw r.mensaje;
-
-    trabajador = r.data;
+    trabajador=r.data;
     p1.style.display="none";
     p2.style.display="block";
-    p2.classList.add("fade-in");
-
-    nombre.innerText = trabajador.nombre;
-    cargo.innerText = trabajador.cargo;
-    foto.src = trabajador.foto || "https://via.placeholder.com/110";
+    nombre.innerText=trabajador.nombre;
+    cargo.innerText=trabajador.cargo;
+    foto.src=trabajador.foto||"https://via.placeholder.com/110";
   })
   .catch(e=>mostrarAlerta(e))
-  .finally(()=>{
-    loader.style.display="none";
-    document.body.classList.remove("buscando");
-    document.querySelector(".btn-buscar").disabled = false;
-  });
+  .finally(()=>loader.style.display="none");
 }
 
 /* QR */
 function abrirQR(tipo){
-  tipoActual = tipo;
-  document.body.classList.toggle("entrada", tipo==="ENTRADA");
-  document.body.classList.toggle("salida", tipo==="SALIDA");
+  if(marcoHoy(tipo))
+    return mostrarAlerta(`Ya registró ${tipo} hoy`);
 
-  bloqueado = false;
+  tipoActual=tipo;
   qrModal.style.display="flex";
 
-  if(!qr) qr = new Html5Qrcode("reader");
+  if(!qr) qr=new Html5Qrcode("reader");
 
   qr.start({facingMode:"environment"},{fps:8,qrbox:200},txt=>{
     if(txt!==QR_VALIDO || bloqueado) return;
-    bloqueado = true;
-    navigator.vibrate?.(150);
+    bloqueado=true;
     cerrarQR();
     registrar();
   });
@@ -291,12 +236,11 @@ function cerrarQR(){
 
 /* REGISTRAR */
 function registrar(){
-  obtenerUbicacionActual(p=>{
+  navigator.geolocation.getCurrentPosition(p=>{
     loader.style.display="flex";
 
     fetch(API_URL,{
       method:"POST",
-      cache:"no-store",
       body:new URLSearchParams({
         action:"registrar",
         dni:trabajador.dni,
@@ -311,6 +255,7 @@ function registrar(){
     .then(r=>r.json())
     .then(r=>{
       if(!r.ok) throw r.mensaje;
+      guardarMarca(tipoActual);
       mostrarAlerta(r.mensaje);
       setTimeout(()=>location.reload(),1200);
     })
@@ -319,33 +264,13 @@ function registrar(){
   });
 }
 
-/* UBICACIÓN */
-function obtenerUbicacionActual(ok){
-  if(!navigator.geolocation)
-    return mostrarAlerta("Este dispositivo no soporta ubicación.");
-
-  navigator.geolocation.getCurrentPosition(
-    p=>ok(p),
-    ()=>mostrarAlerta("No se pudo obtener la ubicación."),
-    {enableHighAccuracy:true}
-  );
-}
-
 /* ALERTA */
 function mostrarAlerta(m){
-  alertaMsg.innerText = m;
+  alertaMsg.innerText=m;
   alerta.style.display="flex";
 }
 function cerrarAlerta(){
   alerta.style.display="none";
-}
-</script>
-
-<script>
-if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("sw.js").catch(()=>{});
-  });
 }
 </script>
 
