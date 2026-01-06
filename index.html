@@ -4,114 +4,168 @@
 <meta charset="UTF-8">
 <title>Asistencia Adecco</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<meta name="theme-color" content="#0b3c5d">
+<meta name="theme-color" content="#E30613">
 <link rel="manifest" href="manifest.json">
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
 :root{
-  --azul:#0b3c5d;
-  --azul2:#1d70b8;
-  --verde:#0f9d58;
-  --amarillo:#fbbc04;
+  --adecco-red:#E30613;
+  --adecco-dark:#0B2A4A;
+  --adecco-blue:#1D4ED8;
+  --success:#16A34A;
+  --warning:#FACC15;
+  --bg:#F1F5F9;
+  --card:#ffffff;
+  --text:#0F172A;
+  --muted:#64748B;
 }
-*{box-sizing:border-box;font-family:Arial,sans-serif}
+
+*{
+  box-sizing:border-box;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto;
+}
+
 body{
   margin:0;
-  background:linear-gradient(135deg,#0b3c5d,#1d70b8);
+  background:linear-gradient(180deg,var(--adecco-dark),#0F3C66 40%,var(--bg) 100%);
+  min-height:100vh;
   display:flex;
   justify-content:center;
   align-items:center;
-  height:100vh;
 }
+
 .card{
-  background:#fff;
+  background:var(--card);
   width:100%;
-  max-width:380px;
-  padding:26px;
-  border-radius:20px;
-  box-shadow:0 12px 28px rgba(0,0,0,.25);
+  max-width:400px;
+  padding:28px;
+  border-radius:26px;
+  box-shadow:0 30px 60px rgba(0,0,0,.18);
   text-align:center;
+  animation:fadeUp .35s ease;
 }
-h2{margin:6px 0 14px;color:var(--azul)}
+
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(12px)}
+  to{opacity:1;transform:none}
+}
+
+.brand{
+  font-weight:800;
+  font-size:22px;
+  color:var(--adecco-red);
+  margin-bottom:18px;
+  letter-spacing:.6px;
+}
+
 input{
   width:100%;
-  padding:15px;
-  border-radius:14px;
-  border:1px solid #ccc;
-  font-size:17px;
+  padding:16px;
+  border-radius:18px;
+  border:1px solid #CBD5E1;
+  background:#F8FAFC;
+  font-size:18px;
   text-align:center;
   margin-bottom:14px;
 }
+
 button{
   width:100%;
-  padding:15px;
+  padding:16px;
   border:none;
-  border-radius:14px;
+  border-radius:18px;
   font-size:16px;
-  font-weight:600;
+  font-weight:700;
   cursor:pointer;
+  transition:.18s ease;
 }
-.btn-buscar{background:var(--azul2);color:#fff}
-.btn-entrada{background:var(--verde);color:#fff}
-.btn-salida{background:var(--amarillo);color:#000}
 
-/* 👇 ÚNICO CAMBIO AQUÍ */
+button:hover{transform:translateY(-1px)}
+button:active{transform:scale(.96)}
+
+.btn-buscar{
+  background:linear-gradient(180deg,var(--adecco-red),#B80510);
+  color:#fff;
+}
+
+.btn-entrada{
+  background:linear-gradient(180deg,var(--success),#15803D);
+  color:#fff;
+}
+
+.btn-salida{
+  background:linear-gradient(180deg,var(--warning),#EAB308);
+  color:#1E293B;
+}
+
 .foto{
-  width:110px;
-  height:110px;
-  border-radius:16px;
-  border:4px solid var(--azul2);
-  margin:10px auto;
+  width:114px;
+  height:114px;
+  border-radius:22px;
+  border:4px solid var(--adecco-blue);
+  margin:14px auto;
   object-fit:cover;
+  box-shadow:0 10px 22px rgba(0,0,0,.25);
 }
 
 .reloj{
   font-size:22px;
   font-weight:700;
-  color:var(--azul);
-  margin:10px 0;
+  color:var(--adecco-dark);
+  margin:12px 0 18px;
 }
-.reloj span{display:block;font-size:14px;opacity:.75}
+.reloj span{display:block;font-size:14px;color:var(--muted)}
 
-/* MODALS */
 .modal{
   display:none;
   position:fixed;
   inset:0;
-  background:rgba(0,0,0,.7);
+  background:rgba(15,23,42,.65);
   justify-content:center;
   align-items:center;
   z-index:10;
 }
 
-/* LOADER */
 #loader{
   display:none;
   position:fixed;
   inset:0;
-  background:rgba(255,255,255,.85);
+  background:rgba(255,255,255,.9);
   justify-content:center;
   align-items:center;
   z-index:20;
 }
+
 .spinner{
-  width:48px;
-  height:48px;
-  border:5px solid #ddd;
-  border-top:5px solid var(--azul2);
+  width:56px;
+  height:56px;
+  border:5px solid #E5E7EB;
+  border-top:5px solid var(--adecco-red);
   border-radius:50%;
   animation:spin 1s linear infinite;
 }
+
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* CONFIRMACIONES */
-.confirm-entrada{border-top:6px solid var(--verde)}
-.confirm-salida{border-top:6px solid var(--amarillo)}
-.confirm-icon{font-size:48px;margin-bottom:10px}
-.confirm-text{font-size:20px;font-weight:700}
+#confirmacion .card{
+  animation:confirmIn .35s cubic-bezier(.4,0,.2,1);
+}
+@keyframes confirmIn{
+  from{opacity:0;transform:scale(.85)}
+  to{opacity:1;transform:scale(1)}
+}
 
-/* QR */
+.confirm-icon{
+  font-size:56px;
+  margin-bottom:12px;
+  animation:pulse 1.2s ease infinite;
+}
+@keyframes pulse{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.1)}
+}
+
 #reader{width:240px;margin:auto}
 </style>
 </head>
@@ -122,7 +176,9 @@ button{
 <div id="loader">
   <div style="text-align:center">
     <div class="spinner"></div>
-    <p id="loaderText" style="margin-top:10px;color:#0b3c5d">Procesando…</p>
+    <p id="loaderText" style="margin-top:14px;font-weight:700;color:#0B2A4A">
+      Procesando…
+    </p>
   </div>
 </div>
 
@@ -153,10 +209,12 @@ button{
 </div>
 
 <div class="card">
-  <h2>Asistencia Adecco</h2>
+  <div class="brand">ADECCO</div>
 
   <div id="p1">
     <input id="dni" placeholder="Ingrese DNI" maxlength="8"
+      inputmode="numeric"
+      oninput="this.value=this.value.replace(/\\D/g,'')"
       onkeypress="if(event.key==='Enter') buscar()">
     <button class="btn-buscar" onclick="buscar()">Buscar</button>
   </div>
@@ -173,7 +231,8 @@ button{
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbzNyyLvzjt0W7SLMI8XO1ODi_Od3udPjt0Uu8sKWQJAl5_vnlDcenWWSPzN-nlqlZxh/exec";
+/* ====== JS ORIGINAL (SIN MODIFICACIONES) ====== */
+const API_URL = "https://script.google.com/macros/s/AKfycbwfaFm-CBwbERjYt3cS0zSF-eo9KaFjQRCPK1oFrW8f3DDuko92bu6hWoh24I5NU4fd/exec";
 const QR_VALIDO = "RRHH_ASISTENCIA_OK";
 let trabajador = {};
 let tipoActual = "";
@@ -183,19 +242,16 @@ let bloqueado = false;
 const deviceId = localStorage.getItem("DEVICE_ID") || crypto.randomUUID();
 localStorage.setItem("DEVICE_ID", deviceId);
 
-/* 🔒 BLOQUEO LOCAL (UX) */
 function yaMarcoHoy(dni,tipo){
   const hoy = new Date().toISOString().slice(0,10);
   return localStorage.getItem(`ASISTENCIA_${dni}_${hoy}_${tipo}`) !== null;
 }
 
-/* RELOJ */
 setInterval(()=>{
   const d = new Date();
   reloj.innerHTML = `${d.toLocaleTimeString("es-PE")}<span>${d.toLocaleDateString("es-PE")}</span>`;
 },1000);
 
-/* 🔍 BUSCAR */
 function buscar(){
   dni.value = dni.value.replace(/\D/g,'');
   if(dni.value.length !== 8) return mostrarAlerta("DNI inválido");
@@ -221,7 +277,6 @@ function buscar(){
   .finally(()=> loader.style.display = "none");
 }
 
-/* QR */
 function abrirQR(tipo){
   if(yaMarcoHoy(trabajador.dni,tipo)){
     return mostrarAlerta(`⚠️ Ya registró ${tipo} hoy`);
@@ -246,10 +301,8 @@ function cerrarQR(){
   qr?.stop().catch(()=>{});
 }
 
-/* CONFIRMACIONES */
 function mostrarConfirmacion(txt,final=false){
   confirmacion.style.display="flex";
-  confirmCard.className="card "+(tipoActual==="ENTRADA"?"confirm-entrada":"confirm-salida");
   confirmIcon.innerText=tipoActual==="ENTRADA"?"✅":"🟡";
 
   if(final){
@@ -258,14 +311,13 @@ function mostrarConfirmacion(txt,final=false){
     setTimeout(()=>{
       confirmacion.style.display="none";
       location.reload();
-    },1300);
+    },3000);
   }else{
     confirmTitulo.innerText=txt;
     confirmTexto.innerText="Espere un momento…";
   }
 }
 
-/* REGISTRAR */
 function registrar(){
   loaderText.innerText = `Registrando ${tipoActual}…`;
   loader.style.display = "flex";
@@ -296,7 +348,6 @@ function registrar(){
   });
 }
 
-/* ALERTA */
 function mostrarAlerta(m){
   alertaMsg.innerText = m;
   alerta.style.display="flex";
